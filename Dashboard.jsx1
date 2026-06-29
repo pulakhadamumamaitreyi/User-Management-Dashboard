@@ -1,0 +1,258 @@
+import { useEffect, useMemo, useState } from "react";
+import UserForm from "../components/UserForm";
+import {
+  getUsers,
+  addUser,
+  updateUser,
+  deleteUser,
+} from "../services/userService";
+
+function Dashboard() {
+  const [users, setUsers] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
+
+  const [search, setSearch] = useState("");
+
+  const [departmentFilter, setDepartmentFilter] = useState("");
+
+  const [sortBy, setSortBy] = useState("");
+
+  const [page, setPage] = useState(1);
+
+  const [limit, setLimit] = useState(10);
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const loadUsers = async () => {
+    try {
+      const res = await getUsers();
+
+      const data = res.data.map((user) => {
+        const names = user.name.split(" ");
+
+        return {
+          id: user.id,
+          firstName: names[0],
+          lastName: names.slice(1).join(" "),
+          email: user.email,
+          department: user.company.name,
+        };
+      });
+
+      setUsers(data);
+    } catch {
+      alert("Unable to fetch users");
+    }
+  };
+
+  const handleSave = async (user) => {
+    if (selectedUser) {
+      await updateUser(selectedUser.id, user);
+
+      setUsers(
+        users.map((u) =>
+          u.id === selectedUser.id
+            ? { ...user, id: selectedUser.id }
+            : u
+        )
+      );
+
+      setSelectedUser(null);
+    } else {
+      await addUser(user);
+
+      setUsers([...users, { ...user, id: users.length + 1 }]);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Delete User?")) return;
+
+    await deleteUser(id);
+
+    setUsers(users.filter((u) => u.id !== id));
+  };
+
+  const filteredUsers = useMemo(() => {
+    let data = [...users];
+
+    if (search) {
+      data = data.filter(
+        (u) =>
+          u.firstName.toLowerCase().includes(search.toLowerCase()) ||
+          u.lastName.toLowerCase().includes(search.toLowerCase()) ||
+          u.email.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+
+    if (departmentFilter) {
+      data = data.filter((u) =>
+        u.department
+          .toLowerCase()
+          .includes(departmentFilter.toLowerCase())
+      );
+    }
+
+    if (sortBy === "name") {
+      data.sort((a, b) =>
+        a.firstName.localeCompare(b.firstName)
+      );
+    }
+
+    if (sortBy === "email") {
+      data.sort((a, b) =>
+        a.email.localeCompare(b.email)
+      );
+    }
+
+    return data;
+  }, [users, search, departmentFilter, sortBy]);
+
+  const totalPages = Math.ceil(filteredUsers.length / limit);
+
+  const paginatedUsers = filteredUsers.slice(
+    (page - 1) * limit,
+    page * limit
+  );
+
+  return (
+    <div className="container">
+
+      <h1>User Management Dashboard</h1>
+
+      <UserForm
+        selectedUser={selectedUser}
+        onSave={handleSave}
+        onCancel={() => setSelectedUser(null)}
+      />
+
+      <div className="toolbar">
+
+        <input
+          placeholder="Search..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+
+        <input
+          placeholder="Department"
+          value={departmentFilter}
+          onChange={(e) =>
+            setDepartmentFilter(e.target.value)
+          }
+        />
+
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+        >
+          <option value="">Sort</option>
+          <option value="name">Name</option>
+          <option value="email">Email</option>
+        </select>
+
+        <select
+          value={limit}
+          onChange={(e) =>
+            setLimit(Number(e.target.value))
+          }
+        >
+          <option value="10">10</option>
+          <option value="25">25</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+
+      </div>
+
+      <table>
+
+        <thead>
+
+          <tr>
+
+            <th>ID</th>
+
+            <th>First Name</th>
+
+            <th>Last Name</th>
+
+            <th>Email</th>
+
+            <th>Department</th>
+
+            <th>Actions</th>
+
+          </tr>
+
+        </thead>
+
+        <tbody>
+
+          {paginatedUsers.map((user) => (
+
+            <tr key={user.id}>
+
+              <td>{user.id}</td>
+
+              <td>{user.firstName}</td>
+
+              <td>{user.lastName}</td>
+
+              <td>{user.email}</td>
+
+              <td>{user.department}</td>
+
+              <td>
+
+                <button
+                  onClick={() => setSelectedUser(user)}
+                >
+                  Edit
+                </button>
+
+                <button
+                  onClick={() => handleDelete(user.id)}
+                >
+                  Delete
+                </button>
+
+              </td>
+
+            </tr>
+
+          ))}
+
+        </tbody>
+
+      </table>
+
+      <div className="pagination">
+
+        <button
+          disabled={page === 1}
+          onClick={() => setPage(page - 1)}
+        >
+          Previous
+        </button>
+
+        <span>
+          Page {page} of {totalPages || 1}
+        </span>
+
+        <button
+          disabled={page === totalPages}
+          onClick={() => setPage(page + 1)}
+        >
+          Next
+        </button>
+
+      </div>
+
+    </div>
+  );
+}
+
+export default Dashboard;
