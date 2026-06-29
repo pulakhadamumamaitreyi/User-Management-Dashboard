@@ -1,0 +1,35 @@
+.toolbar {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.toolbar input,
+.toolbar select {
+  padding: 10px;
+}
+
+.pagination {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+@media(max-width:768px){
+
+table{
+display:block;
+overflow-x:auto;
+}
+
+.form{
+flex-direction:column;
+}
+
+.toolbar{
+flex-direction:column;
+}
+
+}
